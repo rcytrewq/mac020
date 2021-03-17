@@ -1,4 +1,4 @@
-from mpl_toolkits import mplot3d 
+#from mpl_toolkits import mplot3d 
 #from mpl_toolkits import axes3d
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
@@ -13,7 +13,7 @@ import time
 ###############                                 ##################
 ##################################################################
 
-K = 100. #permeabilidade 
+theta = .01#permeabilidade 
 phi = 0.2 #porosidade
 mi_w = 1. #viscosidade da agua
 mi_o = 5. #viscosidade do oleo
@@ -48,28 +48,44 @@ def permW(s):
 def permO(s):
 	return 0.8*((1-sor-s)/(1-sor-swi))**2
 	
-
+def kaI(i,j): #retorna k_(i+1/2). Para k_(i-1/2), usar i-1 como parametro
+	if i<0: return K[i+1][j]/2
+	elif i+1>= nelX: return K[i][j]/2
+	else: return (K[i][j]+K[i+1][j])/2
+	
+def kaJ(i,j):
+	if j<0: return K[i][j+1]/2
+	elif j+1>= nelX: return K[i][j]/2
+	else: return (K[i][j]+K[i][j+1])/2
 
 S = np.zeros((nelX, nelY))
 print(S)
+
+
+K = np.zeros((nelX, nelY))
+for i in range (nelX):
+	for j in range (nelY):
+		K[i][j] = -theta*((permO(S[i][j])/mi_o) + (permW(S[i][j])/mi_w))
+
+'''
 THETA = np.zeros((nelX, nelY))
 for i in range (nelX):
 	for j in range (nelY):
 		THETA[i][j] = -K*((permO(S[i][j])/mi_o)+(permW(S[i][j])/mi_w))
 
-s=0.9 #saturacao inicial
-
+#s=0.9 #saturacao inicial
+'''
 
 #theta = -K*((permO(s)/mi_o)+(permW(s)/mi_w))
 
-print(THETA)
+#print(THETA)
 
 def func (i,j):
 	if (i==np.round(nelX/2)-1 and j==0):
-		print("AAAAAAAAAAAAAAAAAAAAA")
+		#print("AAAAAAAAAAAAAAAAAAAAA")
 		return 1
 	elif (i==np.round(nelX/2)-1 and j ==nelY-1):
-		print("BBBBBBBBBBBBBBBBB")
+		#print("BBBBBBBBBBBBBBBBB")
 		return -1
 	else: return 0
 	
@@ -100,6 +116,68 @@ for i in range (nelX):
 
 O = np.zeros((nelX, nelY))
 
+
+##################################################################
+###############                                 ##################
+###############       Criacao da matriz A       ##################
+###############                                 ##################
+##################################################################
+
+
+
+A = np.zeros((nelX*nelY, nelX*nelY))
+for j in range (nelX):
+	for i in range (nelX):
+		if(j==0):
+			if(i==0):
+				A[i][j] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[i][j+1] = kaI(i,j) #Diagonal superior
+				A[i][nelX+j] = kaJ(i,j) #Diagonal direita
+			elif(i==nelX-1):
+				A[i][i] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[i][nelX+i] = kaJ(i,j) #Diagonal direita
+				A[i][i-1] = kaI(i-1,j) #Diagonal inferior
+			else:
+				A[i][i] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[i][i+1] = kaI(i,j) #Diagonal superior
+				A[i][i-1] = kaI(i-1,j) #Diagonal inferior
+				A[i][nelX+i] = kaJ(i,j) #Diagonal direita
+
+		elif(j==nelX-1):
+			if(i==0):
+				A[nelX*j][nelX*(j)] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[nelX*j][nelX*(j)+1] = kaI(i,j) #Diagonal superior
+				A[nelX*j][nelX*(j-1)] = kaJ(i,j-1)	#Diagonal esquerda
+			elif(i==nelX-1):
+				A[nelX*nelX-1][nelX*nelX-1] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[nelX*nelX-1][nelX*nelX-2] = kaI(i-1,j) #Diagonal inferior
+				A[nelX*nelX-1][nelX*j-1] = kaJ(i,j-1) #Diagonal esquerda
+			else:
+				A[nelX*j+i][nelX*j+i] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[nelX*j+i][nelX*j+i+1] = kaI(i,j) #Diagonal superior
+				A[nelX*j+i][nelX*j+i-1] = kaI(i-1,j) #Diagonal inferior
+				A[nelX*j+i][nelX*(j-1)+i] = kaJ(i,j-1) #Diagonal esquerda
+				
+		else:
+			if(i==0):
+				A[nelX*j][nelX*j] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[nelX*j][nelX*j+1] = kaI(i,j) #Diagonal superior
+				A[nelX*j][nelX*(j+1)+i] = kaJ(i,j) #Diagonal direita
+				A[nelX*j][nelX*(j-1)+i] = kaJ(i,j-1) #Diagonal esquerda
+			elif(i==nelX-1):
+				A[nelX*j+i][nelX*j+i] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[nelX*j+i][nelX*j+i-1] = kaI(i-1,j) #Diagonal inferior
+				A[nelX*j+i][nelX*(j+1)+i] = kaJ(i,j) #Diagonal direita
+				A[nelX*j+i][nelX*(j-1)+i] = kaJ(i,j-1) #Diagonal esquerda
+			else:
+				A[nelX*j+i][nelX*j+i] = -(kaI(i,j) + kaI(i-1,j) + kaJ(i,j) + kaJ(i,j-1)) #Diagonal principal
+				A[nelX*j+i][nelX*j+i+1] = kaI(i,j) #Diagonal superior
+				A[nelX*j+i][nelX*j+i-1] = kaI(i-1,j) #Diagonal inferior
+				A[nelX*j+i][nelX*(j+1)+i] = kaJ(i,j) #Diagonal direita
+				A[nelX*j+i][nelX*(j-1)+i] = kaJ(i,j-1) #Diagonal esquerda
+				
+
+'''
 mat_list = [] 
 for i in range(0,nelX): # generate row
     tmp = []
@@ -126,17 +204,19 @@ for q in range(nelX*nelY):
 			A_[q][nelX*i+j] = -THETA[j][i]
 
 A_ = A*A_*(h**2)
-
+'''
 
 
 print("\n\n**************************************************\n\n")
-print(A_)
+print(A)
 print("\n\n**************************************************\n\n")
 
 F_ = h**2*F
 
-Sol = np.linalg.solve(A_, F_)
+Sol = np.linalg.solve((A*h**2), F_)
 Sol = np.reshape(Sol,(nelX, nelY))
+
+'''
 Sol = Sol.T
 
 
@@ -175,11 +255,11 @@ for i in range (nelX):
 
 
 print(Sol)
-
 '''
+
 fig = plt.figure()
 ax = fig.gca(projection='3d')
-  '''  
+
 # Make data.
 X_ = np.arange(dominioX[0], dominioX[1]+dx, dx)
 Y_ = np.arange(dominioX[0], dominioY[1]+dy, dy)
@@ -189,16 +269,18 @@ colors=np.arange(-10,15,1)
 plt.rcParams['figure.figsize'] = [8, 6]
 fig = plt.figure()
 
-'''
-ax = fig.gca(projection='3d')
+#ax = fig.gca(projection='3d')
 
-ax.plot_surface(x, y, solucao, cmap=cm.coolwarm,linewidth=0, antialiased=False, vmin = 0, vmax = amplitude)
+#ax.plot_surface(X_, Y_, Sol, cmap=cm.coolwarm,linewidth=0, antialiased=False)
 #ax.plot_surface(x, y, solucao, cmap=plt.cm.gray ,linewidth=0, antialiased=False, vmin = 0, vmax = amplitude)
-ax.set_title("t="+"{:.2f}".format(tempo)+"s")
-ax.set_zlim([0,amplitude])
-'''
-plt.contourf(Sol, levels=15,cmap='jet', linewidths=0.5)
-#plt.imshow(Sol, cmap='Spectral', interpolation='nearest', extent=[0,30,0,30])
+#ax.set_title("t="+"{:.2f}".format(tempo)+"s")
+#ax.set_zlim([0,amplitude])
+
+#plt.contourf(Sol, levels=15,cmap='jet', linewidths=0.5)
+plt.imshow(Sol, cmap='jet',interpolation='nearest', extent=[0,X_[-1][-1], 0, Y_[-1][-1]])
+
+#plt.contour(Sol, levels=15,linewidths=0.5)
+#surf = ax.plot_surface(X_, Y_, Sol, cmap='jet')
 plt.colorbar()
 plt.title("TITLE")
 
@@ -208,59 +290,3 @@ plt.show()
 
 plt.close()
 
-#plt.imshow(velx, cmap='jet', interpolation='nearest', extent=[0,30,0,30])
-plt.contourf(velx, levels=15,cmap='jet', linewidths=0.5)
-plt.colorbar()
-plt.title("velx")
-
-plt.xlabel('Y')
-plt.ylabel('X')
-plt.show()
-
-plt.close()
-
-#plt.imshow(vely, cmap='jet', interpolation='nearest', extent=[0,30,0,30])
-plt.contourf(vely, levels=15,cmap='jet', linewidths=0.5)
-plt.colorbar()
-plt.title("vely")
-
-plt.xlabel('Y')
-plt.ylabel('X')
-plt.show()
-
-plt.close()
-
-#plt.imshow(vel, cmap='jet', interpolation='nearest')
-#plt.colorbar()
-plt.contourf(vel, levels=15,cmap='jet', linewidths=0.5)
-
-plt.colorbar()
-plt.title("vel")
-
-plt.xlabel('Y')
-plt.ylabel('X')
-plt.show()
-
-plt.close()
-'''
-#print("\n\n\n\n", X, "\n\n\n\n\n")
-   
-#Z = np.reshape(E, (nelX, nelY))
-
-#plot_3d_surface(X, Y, K_, 1)
-    
-    # Plot the surface.
-
-#surf = ax.plot_surface(X_, Y_, Sol, rstride=1, cstride=1, cmap='hsv')
-#ax.zaxis.set_major_locator(LinearLocator(10))
-#ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-#plt.contour(X_, Y_, K_, cmap='coolwarm_r')
-print(len(X_))
-print(len(Y_))
-print(len(Sol))
-
-#surf = ax.plot_wireframe(X_, Y_, Sol)
-im = plt.imshow(Sol, cmap='coolwarm')
-plt.colorbar()
-plt.show()
-'''
