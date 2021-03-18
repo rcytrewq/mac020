@@ -29,6 +29,8 @@ J = 1
 dominioX = [0.0, 1.]
 dominioY = [0.0, 1.]
 
+
+numit = 500
 nelX = 21
 dx = (dominioX[1]-dominioX[0])/(nelX-1)
 print(dx)
@@ -55,9 +57,9 @@ S_new = np.zeros((nelX, nelY))
 vely = np.zeros((nelX, nelY))
 velx = np.zeros((nelX, nelY))
 
-def efe(i,j):
-	lambda_w = permW(S[i][j])/mi_w
-	lambda_o = permO(S[i][j])/mi_o
+def efe(s):
+	lambda_w = permW(s)/mi_w
+	lambda_o = permO(s)/mi_o
 	lambda_tot = lambda_w+lambda_o
 	
 	return (lambda_w/lambda_tot)
@@ -96,7 +98,7 @@ def func2 (i,j):
 		return J
 	elif (i==np.round(nelX/2)-1 and j ==nelY-1):
 		#print("BBBBBBBBBBBBBBBBB")
-		return #efe(i,j)*func(i,j)
+		return 0#efe(S[i][j])*func(i,j)
 	else: return 0
 
 
@@ -105,7 +107,7 @@ def func2 (i,j):
 
 
 
-itera = np.arange(0, 100, 1)
+itera = np.arange(0, numit, 1)
 
 
 
@@ -298,21 +300,117 @@ for it in tqdm (itera):
 	for i in range (1,nelX-1):
 		for j in range (1,nelY-1):
 			if (velx[i][j]>=0): 
-				if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(i,j)-efe(i-1,j))*velx[i][j] + (efe(i,j)-efe(i, j-1))*vely[i][j]   )/h )) + S[i][j]
-				else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(i,j)-efe(i-1,j))*velx[i][j] + (efe(i,j+1)-efe(i, j))*vely[i][j]   )/h )) + S[i][j]
+				if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i-1][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j-1]))*vely[i][j]   )/h )) + S[i][j]
+				else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i-1][j]))*velx[i][j] + (efe(S[i][j+1])-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
 			else:
-				if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(i+1,j)-efe(i,j))*velx[i][j] + (efe(i,j)-efe(i, j-1))*vely[i][j]   )/h )) + S[i][j]
-				else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(i+1,j)-efe(i,j))*velx[i][j] + (efe(i,j+1)-efe(i, j))*vely[i][j]   )/h )) + S[i][j]
+				if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i+1][j])-efe(S[i][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j-1]))*vely[i][j]   )/h )) + S[i][j]
+				else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i+1][j])-efe(S[i][j]))*velx[i][j] + (efe(S[i][j+1])-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
 				
-	'''for i in range(nelX):
-		if (i!=0 and i!=nelX-1):
-			S_new[i][0] = S_new[i][1]
-			S_new[i][nelX-1] = S_new[i][nelX-2]
-			S_new[0][i] = S_new[1][i]
-			S_new[0][nelX-1] = S_new[i][nelX-2]
+	for i in range(1,nelX-1):
+	
+	#CONTORNO SUPERIOR
+		if (velx[0][i]>=0): 
+			if(vely[0][i]>=0):
+				S_new[0][i] = ((dt/phi) * (func2(0,i) - ( (efe(S[0][i])-efe(S[1][i]-2*h*func2(0,i)))*velx[0][i] + (efe(S[0][i])-efe(S[0][i-1]))*vely[0][i]   )/h )) + S[0][i]
+	
+			else: S_new[0][i] = ((dt/phi) * (func2(0,i) - ( (efe(S[0][i])-efe(S[1][i]-2*h*func2(0,1)))*velx[0][i] + (efe(S[0][i+1])-efe(S[0][i]))*vely[0][i]   )/h )) + S[0][i]
+				
+		else:
+			if(vely[0][i]>=0): S_new[0][i] = ((dt/phi) * (func2(0,i) - ( (efe(S[1][i])-efe(S[0][i]))*velx[0][i] + (efe(S[0][i])-efe(S[0][i-1]))*vely[0][i]   )/h )) + S[0][i]
+			else: S_new[0][i] = ((dt/phi) * (func2(0,i) - ( (efe(S[1][i])-efe(S[0][i]))*velx[0][i] + (efe(S[0][i+1])-efe(S[0][i]))*vely[0][i]   )/h )) + S[0][i]
+	
+	
+	#CONTORNO ESQUERDO
+	
+		if (velx[i][0]>=0):
+			if(vely[i][0]>=0): S_new[i][0] = ((dt/phi) * (func2(i,0) - ( (efe(S[i][0])-efe(S[i-1][0]))*velx[i][0] + (efe(S[i][0])-efe(S[i][1]+2*h*func2(i,0)))*vely[i][0]   )/h )) + S[i][0]
+			else: S_new[i][0] = ((dt/phi) * (func2(i,0) - ( (efe(S[i][0])-efe(S[i-1][0]))*velx[i][0] + (efe(S[i][1])-efe(S[i][0]))*vely[i][0]   )/h )) + S[i][0]
+		
+		else:
+			if(vely[i][0]>=0): S_new[i][0] = ((dt/phi) * (func2(i,0) - ( (efe(S[i+1][0])-efe(S[i][0]))*velx[i][0] + (efe(S[i][0])-efe(S[i][1]+2*j*func2(i,0)))*vely[i][0]   )/h )) + S[i][0]
+			else: S_new[i][0] = ((dt/phi) * (func2(i,0) - ( (efe(S[i+1][0])-efe(S[i][0]))*velx[i][0] + (efe(S[i][1])-efe(S[i][0]))*vely[i][0]   )/h )) + S[i][0]
+		
+	#CONTORNO INFERIOR		
+		
+		if (velx[nelX-1][i]>=0):
+			if(vely[nelX-1][i]>=0): S_new[nelX-1][i] = ((dt/phi) * (func2(nelX-1,i) - ( (efe(S[nelX-1][i])-efe(S[nelX-2][i]))*velx[nelX-1][i] + (efe(S[nelX-1][i])-efe(S[nelX-1][i-1]))*vely[i][j]   )/h )) + S[nelX-1][j]
+			else: S_new[nelX-1][i] = ((dt/phi) * (func2(nelX-1,i) - ( (efe(S[nelX-1][i])-efe(S[nelX-2][i]))*velx[nelX-1][i] + (efe(S[nelX-1][i+1])-efe(S[nelX-1][i]))*vely[nelX-1][i]   )/h )) + S[nelX-1][i]
+			
+		else:
+			if(vely[nelX-1][i]>=0): S_new[nelX-1][i] = ((dt/phi) * (func2(nelX-1,i) - ( (efe(S[nelX-2][j]-2*h*func2(nelX-1,i))-efe(S[nelX-1][i]))*velx[nelX-1][i] + (efe(S[nelX-1][i])-efe(S[nelX-1][i-1]))*vely[i][j]   )/h )) + S[nelX-1][i]
+			else: S_new[nelX-1][i] = ((dt/phi) * (func2(nelX-1,i) - ( (efe(S[nelX-2][i]-2*h*func2(nelX-1,i))-efe(S[nelX-1][i]))*velx[nelX-1][i] + (efe(S[nelX-1][i+1])-efe(S[nelX-1][i]))*vely[nelX-1][i]   )/h )) + S[nelX-1][i]
+		
+	#CONTORNO DIREITO
+	
+		if(velx[i][nelX-1]>=0):
+			if(vely[i][nelX-1]>=0): S_new[i][nelX-1] = ((dt/phi) * (func2(i,nelX-1) - ( (efe(S[i][j])-efe(S[i-1][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j-1]))*vely[i][j]   )/h )) + S[i][j]
+			else: S_new[i][nelX-1] = ((dt/phi) * (func2(i,nelX-1) - ( (efe(S[i][nelX-1])-efe(S[i-1][nelX-1]))*velx[i][nelX-1] + (efe(S[i][nelX-2]- 2*h*func2(i,nelX-1))-efe(S[i][nelX-1]))*vely[i][nelX-1]   )/h )) + S[i][nelX-1]
+		else:
+			if(vely[i][nelX-1]>=0): S_new[i][nelX-1] = ((dt/phi) * (func2(i,nelX-1) - ( (efe(S[i+1][nelX-1])-efe(S[i][nelX-1]))*velx[i][nelX-1] + (efe(S[i][nelX-1])-efe(S[i][nelX-2]))*vely[i][nelX-1]   )/h )) + S[i][nelX-1]
+			else: S_new[i][nelX-1] = ((dt/phi) * (func2(i,nelX-1) - ( (efe(S[i+1][nelX-1])-efe(S[i][nelX-1]))*velx[i][nelX-1] + (efe(S[i][nelX-2]-2*h*func2(i, nelX-1))-efe(S[i][nelX-1]))*vely[i][nelX-1]   )/h )) + S[i][nelX-1]
+			
+	#PONTO (0,0)
+	
+	i=0
+	j=0
+	
+	if (velx[i][j]>=0): 
+		if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i+1][j])+2*h*func2(i,j))*velx[i][j] + (efe(S[i][j])-efe(S[i][j+1]+2*h*func2(i,j)))*vely[i][j]   )/h )) + S[i][j]
+		else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i+1][j]+2*h*func2(i,j)))*velx[i][j] + (efe(S[i][j+1])-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
+	else:
+		if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i+1][j])-efe(S[i][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j+1]+2*h*func2(i,j)))*vely[i][j]   )/h )) + S[i][j]
+		else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i+1][j])-efe(S[i][j]))*velx[i][j] + (efe(S[i][j+1])-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
+	
+	#PONTO (nelX-1,0)
+	
+	i=nelX-1
+	j=0
+	
+	if (velx[i][j]>=0): 
+		if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i-1][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j+1]+2*h*func2(i,j)))*vely[i][j]   )/h )) + S[i][j]
+		else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i-1][j]))*velx[i][j] + (efe(S[i][j+1])-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
+	else:
+		if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i-1][j]-2*h*func2(i,j))-efe(S[i][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j+1]+2*h*func2(i,j)))*vely[i][j]   )/h )) + S[i][j]
+		else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i-1][j]-2*h*func2(i,j))-efe(S[i][j]))*velx[i][j] + (efe(S[i][j+1])-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
+	
+	#PONTO (0, nelX-1)
+	i=0
+	j=nelX-1
+	
+	
+	if (velx[i][j]>=0): 
+		if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i+1][j]+2*h*func2(i,j)))*velx[i][j] + (efe(S[i][j])-efe(S[i][j-1]))*vely[i][j]   )/h )) + S[i][j]
+		else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i+1][j]+2*h*func2(i,j)))*velx[i][j] + (efe(S[i][j-1]-2*h*func2(i,j))-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
+	else:
+		if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i+1][j])-efe(S[i][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j-1]))*vely[i][j]   )/h )) + S[i][j]
+		else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i+1][j])-efe(S[i][j]))*velx[i][j] + (efe(S[i][j-1]-2*h*func2(i,j))-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
+		
+		
+	#PONTO (nelX-1, nelX-1)
+	
+	i=nelX-1
+	j=nelX-1
+	
+	if (velx[i][j]>=0): 
+		if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i-1][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j-1]))*vely[i][j]   )/h )) + S[i][j]
+		else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i][j])-efe(S[i-1][j]))*velx[i][j] + (efe(S[i][j-1]-2*h*func2(i,j))-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
+	else:
+		if(vely[i][j]>=0): S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i-1][j]-2*h*func2(i,j))-efe(S[i][j]))*velx[i][j] + (efe(S[i][j])-efe(S[i][j-1]))*vely[i][j]   )/h )) + S[i][j]
+		else: S_new[i][j] = ((dt/phi) * (func2(i,j) - ( (efe(S[i-1][j]-2*h*func2(i,j))-efe(S[i][j]))*velx[i][j] + (efe(S[i][j-1]-2*h*func2(i,j))-efe(S[i][j]))*vely[i][j]   )/h )) + S[i][j]
+	
+	
+	'''
+		else:
+			if(vely[i][0]>=0):
+			
+			else:		
+				
+				
+		S_new[0][i] = S_new[1][i]
+		S_new[nelX-1][i] = S_new[i][nelX-2]
 
-'''
 
+	'''
 	for i in range (nelX):
 		for j in range (nelY):
 			S[i][j] = abs(S_new[i][j])
@@ -477,7 +575,7 @@ plt.imshow(S, cmap='jet',interpolation='nearest', extent=[0,X_[-1][-1], 0, Y_[-1
 
 #plt.contour(P, levels=15,linewidths=0.5)
 #surf = ax.plot_surface(X_, Y_, P, cmap='jet')
-plt.clim(0,0.4)
+plt.clim(0,0.6)
 plt.colorbar()
 plt.title("TITLE")
 
