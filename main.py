@@ -15,7 +15,7 @@ from tqdm import tqdm
 ##################################################################
 
 theta = 10.#permeabilidade 
-phi = 0.2 #porosidade
+phi = 0.63636364 #porosidade
 mi_w = 1. #viscosidade da agua
 mi_o = 5. #viscosidade do oleo
 rho_w = 1. #densidade da agua
@@ -25,12 +25,14 @@ sor=0.2 #saturacao de oleo residual
 i=0
 j=0
 
-J = 1
+J = 2.18
 dominioX = [0.0, 1.]
 dominioY = [0.0, 1.]
+#tempo = [0., .]
 
 
-numit = 500
+
+
 nelX = 21
 dx = (dominioX[1]-dominioX[0])/(nelX-1)
 print(dx)
@@ -39,7 +41,9 @@ dy = dx
 h=dx
 dt = h**2
 
+#T_ = np.arange(tempo[0], tempo[1]+dt, dt)
 
+numit = (500)
 sig = 0 #contorno de fluxo = 0
 
 nelY = int (np.ceil((dominioY[1]-dominioY[0])/dy)+1)
@@ -48,7 +52,7 @@ F = np.zeros((nelX*nelY))
 S = np.zeros((nelX, nelY))
 for i in range(nelX):
 	for j in range (nelY):
-		S[i][j] = swi
+		S[i][j] = 0
 
 A = np.zeros((nelX*nelY, nelX*nelY))
 K = np.zeros((nelX, nelY))
@@ -418,7 +422,33 @@ for it in tqdm (itera):
 			K[i][j] = 0
 			F[nelX*j+i] = 0
 			
-			
+	
+	fig = plt.figure()
+	ax = fig.gca(projection='3d')
+
+	# Make data.
+	X_ = np.arange(dominioX[0], dominioX[1]+dx, dx)
+	Y_ = np.arange(dominioX[0], dominioY[1]+dy, dy)
+	X_, Y_ = np.meshgrid(X_, Y_)
+
+	colors=np.arange(-10,15,1)
+	plt.rcParams['figure.figsize'] = [8, 6]
+	fig = plt.figure()
+	
+	plt.imshow(S, cmap='jet',interpolation='nearest', extent=[0,X_[-1][-1], 0, Y_[-1][-1]])
+
+	#plt.contour(P, levels=15,linewidths=0.5)
+	#surf = ax.plot_surface(X_, Y_, P, cmap='jet')
+	plt.clim(0,0.8)
+	plt.colorbar()
+	#plt.title("TITLE")
+
+	plt.xlabel('Y')
+	plt.ylabel('X')
+	plt.savefig("Ok/nel21_tf60_"+str(it)+".png")
+
+	plt.close()
+	plt.close()
 			
 	'''
 	fig = plt.figure()
@@ -575,7 +605,7 @@ plt.imshow(S, cmap='jet',interpolation='nearest', extent=[0,X_[-1][-1], 0, Y_[-1
 
 #plt.contour(P, levels=15,linewidths=0.5)
 #surf = ax.plot_surface(X_, Y_, P, cmap='jet')
-plt.clim(0,0.6)
+plt.clim(0,0.8)
 plt.colorbar()
 plt.title("TITLE")
 
